@@ -3,7 +3,7 @@ model_name: stgan
 exp_name: explo_stgan
 mode: train
 cuda: true
-ngpu: 2
+ngpu: 4
 
 # data
 dataset: explo
@@ -25,7 +25,7 @@ attrs: [thin, strong, wide, soft, disorderly, artistic, complex, playful, calm, 
 checkpoint: ~
 
 # training
-batch_size: 64
+batch_size: 256
 beta1: 0.5
 beta2: 0.999
 g_lr: 0.0002

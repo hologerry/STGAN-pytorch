@@ -43,7 +43,7 @@ class STGANAgent(object):
             self.device = torch.device("cpu")
             self.logger.info("Operation will be on *****CPU***** ")
 
-        self.writer = SummaryWriter(log_dir=self.config.summary_dir)
+        self.writer = SummaryWriter(logdir=self.config.summary_dir)
 
     def save_checkpoint(self):
         G_state = {
