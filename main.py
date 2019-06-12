@@ -1,7 +1,7 @@
 import argparse
 
-from agents import *
-from utils.config import *
+from agents import stgan
+from utils.config import process_config
 
 
 def main():
