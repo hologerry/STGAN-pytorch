@@ -2,7 +2,7 @@ import os
 import logging
 import time
 import datetime
-import traceback
+# import traceback
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -12,7 +12,7 @@ from torchvision.utils import make_grid, save_image
 from tqdm import tqdm
 from tensorboardX import SummaryWriter
 
-from datasets import *
+from datasets.explo import ExploDataLoader
 from models.stgan import Generator, Discriminator
 from utils.misc import print_cuda_statistics
 
@@ -25,11 +25,14 @@ class STGANAgent(object):
         self.logger = logging.getLogger("STGAN")
         self.logger.info("Creating STGAN architecture...")
 
-        self.G = Generator(len(self.config.attrs), self.config.g_conv_dim, self.config.g_layers, self.config.shortcut_layers, use_stu=self.config.use_stu, one_more_conv=self.config.one_more_conv)
-        self.D = Discriminator(self.config.image_size, len(self.config.attrs), self.config.d_conv_dim, self.config.d_fc_dim, self.config.d_layers)
+        self.G = Generator(37, self.config.g_conv_dim, self.config.g_layers,
+                           self.config.shortcut_layers, use_stu=self.config.use_stu,
+                           one_more_conv=self.config.one_more_conv)
+        self.D = Discriminator(self.config.image_size, 37, self.config.d_conv_dim,
+                               self.config.d_fc_dim, self.config.d_layers)
 
-        self.data_loader = globals()['{}_loader'.format(self.config.dataset)](
-            self.config.data_root, self.config.mode, self.config.attrs,
+        self.data_loader = ExploDataLoader(
+            self.config.data_root, self.config.mode,
             self.config.crop_size, self.config.image_size, self.config.batch_size)
 
         self.current_iteration = 0
@@ -50,7 +53,7 @@ class STGANAgent(object):
             'state_dict': self.G.state_dict(),
             'optimizer': self.optimizer_G.state_dict(),
         }
-        D_state  = {
+        D_state = {
             'state_dict': self.D.state_dict(),
             'optimizer': self.optimizer_D.state_dict(),
         }
@@ -86,21 +89,15 @@ class STGANAgent(object):
     def create_labels(self, c_org, selected_attrs=None):
         """Generate target domain labels for debugging and testing."""
         # get hair color indices
-        hair_color_indices = []
-        for i, attr_name in enumerate(selected_attrs):
-            if attr_name in ['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair']:
-                hair_color_indices.append(i)
+        # hair_color_indices = []
+        # for i, attr_name in enumerate(selected_attrs):
+        #     if attr_name in ['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair']:
+        #         hair_color_indices.append(i)
 
         c_trg_list = []
-        for i in range(len(selected_attrs)):
+        for i in range(37):
             c_trg = c_org.clone()
-            if i in hair_color_indices:  # set one hair color to 1 and the rest to 0
-                c_trg[:, i] = 1
-                for j in hair_color_indices:
-                    if j != i:
-                        c_trg[:, j] = 0
-            else:
-                c_trg[:, i] = (c_trg[:, i] == 0)  # reverse attribute value
+            c_trg[:, i] = (c_trg[:, i] == 0)  # reverse attribute value
 
             c_trg_list.append(c_trg.to(self.device))
         return c_trg_list
@@ -125,25 +122,23 @@ class STGANAgent(object):
 
     def run(self):
         assert self.config.mode in ['train', 'test']
-        try:
-            if self.config.mode == 'train':
-                self.train()
-            else:
-                self.test()
-        except KeyboardInterrupt:
-            self.logger.info('You have entered CTRL+C.. Wait to finalize')
-        except Exception as e:
-            log_file = open(os.path.join(self.config.log_dir, 'exp_error.log'), 'w+')
-            traceback.print_exc(file=log_file)
-        finally:
-            self.finalize()
+        if self.config.mode == 'train':
+            self.train()
+        else:
+            self.test()
 
+        self.finalize()
 
     def train(self):
+        print("Training")
         self.optimizer_G = optim.Adam(self.G.parameters(), self.config.g_lr, [self.config.beta1, self.config.beta2])
         self.optimizer_D = optim.Adam(self.D.parameters(), self.config.d_lr, [self.config.beta1, self.config.beta2])
-        self.lr_scheduler_G = optim.lr_scheduler.StepLR(self.optimizer_G, step_size=self.config.lr_decay_iters, gamma=0.1)
-        self.lr_scheduler_D = optim.lr_scheduler.StepLR(self.optimizer_D, step_size=self.config.lr_decay_iters, gamma=0.1)
+        self.lr_scheduler_G = optim.lr_scheduler.StepLR(self.optimizer_G,
+                                                        step_size=self.config.lr_decay_iters,
+                                                        gamma=0.1)
+        self.lr_scheduler_D = optim.lr_scheduler.StepLR(self.optimizer_D,
+                                                        step_size=self.config.lr_decay_iters,
+                                                        gamma=0.1)
 
         self.load_checkpoint()
         if self.cuda and self.config.ngpu > 1:
@@ -153,7 +148,7 @@ class STGANAgent(object):
         val_iter = iter(self.data_loader.val_loader)
         x_sample, c_org_sample = next(val_iter)
         x_sample = x_sample.to(self.device)
-        c_sample_list = self.create_labels(c_org_sample, self.config.attrs)
+        c_sample_list = self.create_labels(c_org_sample)
         c_sample_list.insert(0, c_org_sample)  # reconstruction
 
         self.g_lr = self.lr_scheduler_G.get_lr()[0]
@@ -171,7 +166,7 @@ class STGANAgent(object):
             # fetch real images and labels
             try:
                 x_real, label_org = next(data_iter)
-            except:
+            except Exception:
                 data_iter = iter(self.data_loader.train_loader)
                 x_real, label_org = next(data_iter)
 
@@ -293,7 +288,7 @@ class STGANAgent(object):
         self.G.to(self.device)
 
         tqdm_loader = tqdm(self.data_loader.test_loader, total=self.data_loader.test_iterations,
-                          desc='Testing at checkpoint {}'.format(self.config.checkpoint))
+                           desc='Testing at checkpoint {}'.format(self.config.checkpoint))
 
         self.G.eval()
         with torch.no_grad():

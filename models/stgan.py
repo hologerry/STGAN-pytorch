@@ -37,7 +37,8 @@ class ConvGRUCell(nn.Module):
 
 
 class Generator(nn.Module):
-    def __init__(self, attr_dim, conv_dim=64, n_layers=5, shortcut_layers=2, stu_kernel_size=3, use_stu=True, one_more_conv=True):
+    def __init__(self, attr_dim, conv_dim=64, n_layers=5, shortcut_layers=2, stu_kernel_size=3,
+                 use_stu=True, one_more_conv=True):
         super(Generator, self).__init__()
         self.n_attrs = attr_dim
         self.n_layers = n_layers
@@ -132,7 +133,7 @@ class Generator(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self, image_size=128, attr_dim=10, conv_dim=64, fc_dim=1024, n_layers=5):
+    def __init__(self, image_size=64, attr_dim=37, conv_dim=64, fc_dim=1024, n_layers=5):
         super(Discriminator, self).__init__()
         layers = []
         in_channels = 3
@@ -166,7 +167,7 @@ class Discriminator(nn.Module):
 
 if __name__ == '__main__':
     gen = Generator(5, n_layers=6, shortcut_layers=5, use_stu=True, one_more_conv=True)
-    summary(gen, [(3, 384, 384), (5,)], device='cpu')
+    summary(gen, [(3, 64, 64), (5,)], device='cuda')
 
-    dis = Discriminator(image_size=384, attr_dim=5)
-    summary(dis, (3, 384, 384), device='cpu')
+    dis = Discriminator(image_size=64, attr_dim=37)
+    summary(dis, (3, 64, 64), device='cuda')

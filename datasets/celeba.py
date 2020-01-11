@@ -57,7 +57,7 @@ class CelebADataset(data.Dataset):
 
 class CelebADataLoader(object):
     def __init__(self, root, mode, selected_attrs, crop_size=None, image_size=128, batch_size=16):
-        if mode not in ['train', 'test',]:
+        if mode not in ['train', 'test']:
             return
 
         transform = []

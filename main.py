@@ -1,19 +1,18 @@
 import argparse
 
-from agents import *
-from utils.config import *
+from agents.stgan import STGANAgent
+from utils.config import process_config
 
 
 def main():
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument(
         '--config',
-        default=None,
+        default="configs/train_stgan_explo.yaml",
         help='The path of configuration file in yaml format')
     args = arg_parser.parse_args()
     config = process_config(args.config)
-    agent_class = globals()['{}_agent'.format(config.model_name)]
-    agent = agent_class(config)
+    agent = STGANAgent(config)
     agent.run()
 
 
