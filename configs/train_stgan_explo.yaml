@@ -1,13 +1,13 @@
 # meta
 model_name: stgan
-exp_name: explo_stgan
+exp_name: stgan_att2font
 mode: train
 cuda: true
 ngpu: 1
 
 # data
 dataset: explo
-data_root: data/explo_tag/
+data_root: data/explor_all/
 crop_size: 256
 image_size: 64
 

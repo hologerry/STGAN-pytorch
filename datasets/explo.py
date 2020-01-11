@@ -8,7 +8,7 @@ from PIL import Image
 
 def make_dataset(root, mode):
     assert mode in ['train', 'val', 'test']
-    lines = [line.rstrip() for line in open(os.path.join(root, 'gw_binary_atts.txt'), 'r')]
+    lines = [line.rstrip() for line in open(os.path.join(root, 'attributes.txt'), 'r')]
     all_attr_names = lines[0].strip().split()
     attr2idx = {}
     idx2attr = {}
@@ -33,7 +33,7 @@ def make_dataset(root, mode):
         values = split[1:]
         label = []
         for val in values:
-            label.append(val.strip() == '1')
+            label.append((float(val)/100) >= 0.5)
         items.append([filename, label])
     return items
 
@@ -47,7 +47,7 @@ class ExploDataset(data.Dataset):
 
     def __getitem__(self, index):
         filename, label = self.items[index]
-        image = Image.open(os.path.join(self.root, 'gw_image', filename))
+        image = Image.open(os.path.join(self.root, 'image', filename)).convert('RGB')
         if self.transform is not None:
             image = self.transform(image)
         return image, torch.FloatTensor(label)
